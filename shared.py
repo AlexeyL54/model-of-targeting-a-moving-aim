@@ -29,6 +29,12 @@ class Role:
     trajectory: list[Point]
 
 
+@dataclass
+class Flight:
+    n: list[float]
+    steps: int
+
+
 def draw(aim: Role, interceptor: Role, i: int):
     indent = 50  # отступ для букв от точек
 
@@ -63,7 +69,10 @@ def draw(aim: Role, interceptor: Role, i: int):
 def angleBetween(vec1: Point, vec2: Point) -> float:
     vec1_len = sqrt(vec1.x**2 + vec1.y**2)
     vec2_len = sqrt(vec2.x**2 + vec2.y**2)
-    cos_angle = (vec1.x * vec2.x + vec1.y * vec2.y) / (vec1_len * vec2_len)
+    try:
+        cos_angle = (vec1.x * vec2.x + vec1.y * vec2.y) / (vec1_len * vec2_len)
+    except ZeroDivisionError:
+        cos_angle = 0
     return acos(cos_angle)
 
 
@@ -98,7 +107,7 @@ def correctionAngle(aim: Role, interceptor: Role):
         if cos_corr_angle >= -1 and cos_corr_angle <= 1:
             return round(acos(cos_corr_angle), 1)  # Возвращаем угол в радианах
         else:
-            return -1  # Некорректное значение
+            return -1
 
 
 """
@@ -121,3 +130,27 @@ def distanceBetween(p1: Point, p2: Point) -> float:
     delta_x = p2.x - p1.x
     delta_y = p2.y - p2.y
     return sqrt(delta_x**2 + delta_y**2)
+
+
+def makeVector(p1: Point, p2: Point) -> Point:
+    x = p2.x - p1.x
+    y = p2.y - p1.x
+    return Point(x, y)
+
+
+def findQAngle(aim: Role, interceptor: Role):
+    if len(interceptor.trajectory) > 1 and len(aim.trajectory) > 1:
+        vision_vec = makeVector(interceptor.trajectory[-1], aim.trajectory[-1])
+        aim_moving_vec = makeVector(aim.trajectory[-2], aim.trajectory[-1])
+        q = angleBetween(vision_vec, aim_moving_vec)
+    else:
+        q = Q0
+    return q
+
+
+def saveFig(path: str):
+    # Настройка и сохранение графика
+    plt.xlabel("x, М")
+    plt.ylabel("y, М")
+    plt.savefig(path)
+    plt.clf()

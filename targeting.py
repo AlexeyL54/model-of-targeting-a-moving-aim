@@ -1,4 +1,15 @@
-from shared import R, D0, Q0, DELTA_T, Point, Role
+from shared import (
+    R,
+    D0,
+    Q0,
+    DELTA_T,
+    Flight,
+    Point,
+    Role,
+    draw,
+    correctionAngle,
+    destroy,
+)
 from math import sin, cos, pi, sqrt
 
 """
@@ -98,3 +109,55 @@ def overloadCircleTargeting(aim: Role, interceptor: Role, q: float) -> float:
     else:
         n: float = 0
     return n
+
+
+"""
+@brief Основной цикл моделирования погони
+@param aim - объект цели
+@param interceptor - объект перехватчика
+@return None
+"""
+
+
+def circleFight(aim: Role, interceptor: Role) -> Flight:
+    t = DELTA_T  # начальное время
+    step: int = 0  # счетчик шагов
+    n: list[float] = []
+
+    # Цикл продолжается до тех пор, пока угол коррекции не станет равным 0
+    while correctionAngle(aim, interceptor) != 0:
+        updateInterceptorPoint(interceptor, aim)
+        draw(aim, interceptor, step)
+        UpdatePointOnCircle(aim, t)
+        t += DELTA_T
+        step += 1
+
+    destroy(aim, interceptor)
+    flight = Flight(n, step)
+    return flight
+
+
+"""
+@brief Основной цикл моделирования погони
+@param aim - объект цели
+@param interceptor - объект перехватчика
+@return None
+"""
+
+
+def lineFight(aim: Role, interceptor: Role) -> Flight:
+    t = DELTA_T  # начальное время
+    step: int = 0  # счетчик шагов
+    n: list[float] = []
+
+    # Цикл продолжается до тех пор, пока угол коррекции не станет равным 0
+    while correctionAngle(aim, interceptor) != 0:
+        updateInterceptorPoint(interceptor, aim)
+        draw(aim, interceptor, step)
+        UpdatePointOnLine(aim, t)
+        t += DELTA_T
+        step += 1
+
+    destroy(aim, interceptor)
+    flight = Flight(n, step)
+    return flight
