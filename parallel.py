@@ -14,6 +14,13 @@ from targeting import UpdatePointOnCircle
 
 
 def updateAimPoint(aim: Role, q: float):
+    """
+    Обновляет позицию цели на основе угла курса.
+
+    Args:
+        aim (Role): Объект цели, чья траектория обновляется
+        q (float): Угол курса в градусах
+    """
     if aim.trajectory:
         Q = q * pi / 180
         S = aim.velocity * DELTA_T
@@ -23,6 +30,13 @@ def updateAimPoint(aim: Role, q: float):
 
 
 def updateInterceptorPoint(aim: Role, interceptor: Role):
+    """
+    Обновляет позицию перехватчика для движения к цели.
+
+    Args:
+        aim (Role): Объект цели
+        interceptor (Role): Объект перехватчика, чья траектория обновляется
+    """
     q = findQAngle(aim, interceptor)
     phi = asin((aim.velocity * sin(q)) / interceptor.velocity)
     S = interceptor.velocity * DELTA_T
@@ -32,15 +46,36 @@ def updateInterceptorPoint(aim: Role, interceptor: Role):
 
 
 def overloadForParellelConvergence(aim: Role, interceptor: Role, q: float) -> float:
+    """
+    Вычисляет необходимую перегрузку для параллельного сближения.
+
+    Args:
+        aim (Role): Объект цели
+        interceptor (Role): Объект перехватчика
+        q (float): Угол между векторами скорости цели и перехватчика
+
+    Returns:
+        float: Значение необходимой перегрузки
+    """
     K = interceptor.velocity / aim.velocity
-    n: float = (K * cos(q)) / sqrt(K**2 - sin(q) ** 2)
+    n: float = abs((K * cos(q)) / sqrt(K**2 - sin(q) ** 2))
     return n
 
 
 def fight(aim: Role, interceptor: Role) -> Flight:
+    """
+    Моделирует процесс перехвата цели параллельным сближением.
+
+    Args:
+        aim (Role): Объект цели
+        interceptor (Role): Объект перехватчика
+
+    Returns:
+        Flight: Объект с данными о полете (траектория, перегрузки, расстояния и т.д.)
+    """
     t = DELTA_T  # начальное время
     step: int = 0  # счетчик шагов
-    n: list[float] = []
+    flight = Flight([], 0, [], [], [], [])
     distance = D0
 
     # Цикл продолжается до тех пор, пока угол коррекции не станет равным 0
@@ -49,11 +84,14 @@ def fight(aim: Role, interceptor: Role) -> Flight:
         draw(aim, interceptor, step)
         updateInterceptorPoint(aim, interceptor)
         UpdatePointOnCircle(aim, t)
-        q = findQAngle(aim, interceptor)
-        n.append(overloadForParellelConvergence(aim, interceptor, q))
+        qi = findQAngle(aim, interceptor)
 
+        flight.n.append(overloadForParellelConvergence(aim, interceptor, qi))
+        flight.d.append(distance)
+        flight.q.append(qi)
+        flight.t.append(t)
         t += DELTA_T
         step += 1
 
-    flight = Flight(n, step)
+    flight.steps = step
     return flight

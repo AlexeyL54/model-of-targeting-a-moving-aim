@@ -9,35 +9,36 @@ from shared import (
     draw,
     correctionAngle,
     destroy,
+    findQAngle,
+    distanceBetween,
 )
 from math import sin, cos, pi, sqrt
 
-"""
-@brief Обновляет позицию цели, движущейся по круговой окружности
-@param aim - объект цели
-@param t - текущее время
-@return None
-"""
-
 
 def UpdatePointOnCircle(aim: Role, t: float):
+    """
+    Обновляет позицию цели, движущейся по круговой траектории.
+
+    Args:
+        aim (Role): Объект цели
+        t (float): Текущее время
+    """
     # Угловая скорость: ω = v / r (рад/с)
-    omega = aim.velocity / R
+    omega = -aim.velocity / R
     # Параметрические уравнения окружности: x = r*cos(ωt), y = r*sin(ωt)
     x = R * cos(omega * t)
-    y = R * sin(omega * t)
+    y = R * sin(omega * t + pi)
     aim.trajectory.append(Point(x, y))
 
 
-"""
-@brief Обновляет позицию цели, движущейся по прямой
-@param aim - объект цели
-@param t - текущее время
-@return None
-"""
-
-
 def UpdatePointOnLine(aim: Role, t: float):
+    """
+    Обновляет позицию цели, движущейся по прямой траектории.
+
+    Args:
+        aim (Role): Объект цели
+        t (float): Текущее время
+    """
     QR = Q0 * pi / 180
     s = aim.velocity * t
     x = s * cos(QR) + D0
@@ -45,15 +46,14 @@ def UpdatePointOnLine(aim: Role, t: float):
     aim.trajectory.append(Point(x, y))
 
 
-"""
-@brief Обновляет позицию перехватчика, движущегося к цели
-@param interceptor - объект перехватчика
-@param aim - объект цели
-@return None
-"""
-
-
 def updateInterceptorPoint(interceptor: Role, aim: Role):
+    """
+    Обновляет позицию перехватчика, движущегося по направлению к цели.
+
+    Args:
+        interceptor (Role): Объект перехватчика
+        aim (Role): Объект цели
+    """
     if interceptor.trajectory and aim.trajectory:
         current_x = interceptor.trajectory[-1].x
         current_y = interceptor.trajectory[-1].y
@@ -80,6 +80,17 @@ def updateInterceptorPoint(interceptor: Role, aim: Role):
 
 
 def overloadLineTargeting(aim: Role, interceptor: Role, q: float) -> float:
+    """
+    Вычисляет необходимую перегрузку для перехвата цели, движущейся по прямой.
+
+    Args:
+        aim (Role): Объект цели
+        interceptor (Role): Объект перехватчика
+        q (float): Угол между векторами скорости цели и перехватчика
+
+    Returns:
+        float: Значение необходимой перегрузки
+    """
     if aim.trajectory and interceptor.trajectory:
         Q = q * pi / 180
         G = 9.8
@@ -96,68 +107,97 @@ def overloadLineTargeting(aim: Role, interceptor: Role, q: float) -> float:
 
 
 def overloadCircleTargeting(aim: Role, interceptor: Role, q: float) -> float:
+    """
+    Вычисляет необходимую перегрузку для перехвата цели, движущейся по окружности.
+
+    Args:
+        aim (Role): Объект цели
+        interceptor (Role): Объект перехватчика
+        q (float): Угол между векторами скорости цели и перехватчика
+
+    Returns:
+        float: Значение необходимой перегрузки
+    """
     if aim.trajectory and interceptor.trajectory:
         Q = q * pi / 180
         G = 9.8
-        delta_x2 = aim.trajectory[-1].x ** 2 - interceptor.trajectory[-1].x ** 2
-        delta_y2 = aim.trajectory[-1].y ** 2 - interceptor.trajectory[-1].y ** 2
-        D = sqrt(delta_x2 + delta_y2)
+        delta_x = aim.trajectory[-1].x - interceptor.trajectory[-1].x
+        delta_y = aim.trajectory[-1].y - interceptor.trajectory[-1].y
+        D = sqrt(delta_x**2 + delta_y**2)
         try:
             n: float = (interceptor.velocity * aim.velocity * sin(Q)) / (G * D)
         except ZeroDivisionError:
-            n: float = 0
+            n: float = interceptor.velocity**2 / (9.8 * R)
     else:
         n: float = 0
     return n
 
 
-"""
-@brief Основной цикл моделирования погони
-@param aim - объект цели
-@param interceptor - объект перехватчика
-@return None
-"""
-
-
 def circleFight(aim: Role, interceptor: Role) -> Flight:
+    """
+    Моделирует процесс перехвата цели, движущейся по круговой траектории.
+
+    Args:
+        aim (Role): Объект цели
+        interceptor (Role): Объект перехватчика
+
+    Returns:
+        Flight: Объект с данными о полете (траектория, перегрузки, расстояния и т.д.)
+    """
+    flight = Flight([], 0, [], [], [], [])
     t = DELTA_T  # начальное время
     step: int = 0  # счетчик шагов
-    n: list[float] = []
 
     # Цикл продолжается до тех пор, пока угол коррекции не станет равным 0
     while correctionAngle(aim, interceptor) != 0:
         updateInterceptorPoint(interceptor, aim)
         draw(aim, interceptor, step)
         UpdatePointOnCircle(aim, t)
+        qi = findQAngle(aim, interceptor)
+        distance = distanceBetween(aim.trajectory[-1], interceptor.trajectory[-1])
+
+        flight.n.append(overloadCircleTargeting(aim, interceptor, qi))
+        flight.d.append(distance)
+        flight.q.append(qi)
+        flight.t.append(t)
         t += DELTA_T
         step += 1
 
     destroy(aim, interceptor)
-    flight = Flight(n, step)
+    flight.steps = step
     return flight
 
 
-"""
-@brief Основной цикл моделирования погони
-@param aim - объект цели
-@param interceptor - объект перехватчика
-@return None
-"""
-
-
 def lineFight(aim: Role, interceptor: Role) -> Flight:
+    """
+    Моделирует процесс перехвата цели, движущейся по прямой траектории.
+
+    Args:
+        aim (Role): Объект цели
+        interceptor (Role): Объект перехватчика
+
+    Returns:
+        Flight: Объект с данными о полете (траектория, перегрузки, расстояния и т.д.)
+    """
+    flight = Flight([], 0, [], [], [], [])
     t = DELTA_T  # начальное время
     step: int = 0  # счетчик шагов
-    n: list[float] = []
 
     # Цикл продолжается до тех пор, пока угол коррекции не станет равным 0
     while correctionAngle(aim, interceptor) != 0:
         updateInterceptorPoint(interceptor, aim)
         draw(aim, interceptor, step)
         UpdatePointOnLine(aim, t)
+        qi = findQAngle(aim, interceptor)
+        distance = distanceBetween(aim.trajectory[-1], interceptor.trajectory[-1])
+
+        flight.n.append(overloadLineTargeting(aim, interceptor, qi))
+        flight.d.append(distance)
+        flight.q.append(qi)
+        flight.t.append(t)
         t += DELTA_T
         step += 1
 
     destroy(aim, interceptor)
-    flight = Flight(n, step)
+    flight.steps = step
     return flight
