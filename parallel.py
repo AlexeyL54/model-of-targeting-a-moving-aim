@@ -77,13 +77,15 @@ def fight(aim: Role, interceptor: Role) -> Flight:
     step: int = 0  # счетчик шагов
     flight = Flight([], 0, [], [], [], [])
     distance = D0
+    circle_center = Point(0, 0)
+    aim_start_on_circle = Point(0, 0)
 
     # Цикл продолжается до тех пор, пока угол коррекции не станет равным 0
     while distance > 200:
         distance = distanceBetween(aim.trajectory[-1], interceptor.trajectory[-1])
         draw(aim, interceptor, step)
         updateInterceptorPoint(aim, interceptor)
-        UpdatePointOnCircle(aim, t)
+        UpdatePointOnCircle(aim, t, circle_center, aim_start_on_circle)
         qi = findQAngle(aim, interceptor)
 
         flight.n.append(overloadForParellelConvergence(aim, interceptor, qi))

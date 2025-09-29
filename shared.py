@@ -1,6 +1,7 @@
 from math import sqrt, acos
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
+from scipy.interpolate import interp1d
 
 # Константы моделирования
 D0 = 2500  # начальное расстояние между целью и перехватчиком (м)
@@ -15,6 +16,7 @@ Q0 = 90  # начальный угол ракурса цели
 @dataclass
 class Point:
     """Класс для представления точки в 2D пространстве."""
+
     x: float
     y: float
 
@@ -22,6 +24,7 @@ class Point:
 @dataclass
 class Role:
     """Класс для представления роли (цели или перехватчика)."""
+
     velocity: float
     trajectory: list[Point]
 
@@ -29,6 +32,7 @@ class Role:
 @dataclass
 class Flight:
     """Класс для хранения данных о полете."""
+
     n: list[float]  # перегрузки
     steps: int  # количество шагов
     d: list[float]  # расстояния
@@ -53,6 +57,7 @@ def saveFlightData(path: str, flight: Flight):
     file.write(f"угл q: {flight.q}\n")
     file.write("\n")
     file.write(f"перегрузка: {flight.n}")
+
 
 def draw(aim: Role, interceptor: Role, i: int):
     """
@@ -249,3 +254,22 @@ def saveFig(path: str, x_label: str, y_label: str):
     plt.ylabel(y_label)
     plt.savefig(path)
     plt.clf()
+
+
+def interpolate(x: list, y: list) -> list:
+    """
+    Экстраполирует входной массив данных.
+
+    Args:
+        x (list): входной массив данных
+    Returns:
+        list: список значений функции экстрополяции
+    """
+    func = interp1d(
+        x,
+        y,
+        axis=0,  # interpolate along columns
+        bounds_error=False,
+        kind="linear",
+    )
+    return func(x)

@@ -15,7 +15,7 @@ from shared import (
 from math import sin, cos, pi, sqrt
 
 
-def UpdatePointOnCircle(aim: Role, t: float):
+def UpdatePointOnCircle(aim: Role, t: float, center: Point, start: Point):
     """
     Обновляет позицию цели, движущейся по круговой траектории.
 
@@ -24,10 +24,10 @@ def UpdatePointOnCircle(aim: Role, t: float):
         t (float): Текущее время
     """
     # Угловая скорость: ω = v / r (рад/с)
-    omega = -aim.velocity / R
+    omega = aim.velocity / R
     # Параметрические уравнения окружности: x = r*cos(ωt), y = r*sin(ωt)
-    x = R * cos(omega * t)
-    y = R * sin(omega * t + pi)
+    x = R * cos(omega * t + start.x) + center.x
+    y = R * sin(omega * t + start.y) + center.y
     aim.trajectory.append(Point(x, y))
 
 
@@ -125,15 +125,15 @@ def overloadCircleTargeting(aim: Role, interceptor: Role, q: float) -> float:
         delta_y = aim.trajectory[-1].y - interceptor.trajectory[-1].y
         D = sqrt(delta_x**2 + delta_y**2)
         try:
-            n: float = (interceptor.velocity * aim.velocity * sin(Q)) / (G * D)
+            n: float = (interceptor.velocity * abs(aim.velocity) * sin(Q)) / (G * D)
         except ZeroDivisionError:
-            n: float = interceptor.velocity**2 / (9.8 * R)
+            n: float = interceptor.velocity**2 / (G * R)
     else:
         n: float = 0
     return n
 
 
-def circleFight(aim: Role, interceptor: Role) -> Flight:
+def circleFight(aim: Role, interceptor: Role, center: Point, start: Point) -> Flight:
     """
     Моделирует процесс перехвата цели, движущейся по круговой траектории.
 
@@ -152,7 +152,7 @@ def circleFight(aim: Role, interceptor: Role) -> Flight:
     while correctionAngle(aim, interceptor) != 0:
         updateInterceptorPoint(interceptor, aim)
         draw(aim, interceptor, step)
-        UpdatePointOnCircle(aim, t)
+        UpdatePointOnCircle(aim, t, center, start)
         qi = findQAngle(aim, interceptor)
         distance = distanceBetween(aim.trajectory[-1], interceptor.trajectory[-1])
 
