@@ -96,7 +96,7 @@ def overloadLineTargeting(aim: Role, interceptor: Role, q: float) -> float:
         G = 9.8
         delta_x2 = aim.trajectory[-1].x ** 2 - interceptor.trajectory[-1].x ** 2
         delta_y2 = aim.trajectory[-1].y ** 2 - interceptor.trajectory[-1].y ** 2
-        D = sqrt(delta_x2 + delta_y2)
+        D = sqrt(abs(delta_x2 + delta_y2))
         try:
             n: float = (interceptor.velocity * aim.velocity * sin(Q)) / (G * D)
         except ZeroDivisionError:
@@ -133,7 +133,9 @@ def overloadCircleTargeting(aim: Role, interceptor: Role, q: float) -> float:
     return n
 
 
-def circleFight(aim: Role, interceptor: Role, center: Point, start: Point) -> Flight:
+def circleFight(
+    aim: Role, interceptor: Role, center: Point, start: Point, pres: int
+) -> Flight:
     """
     Моделирует процесс перехвата цели, движущейся по круговой траектории.
 
@@ -147,14 +149,16 @@ def circleFight(aim: Role, interceptor: Role, center: Point, start: Point) -> Fl
     flight = Flight([], 0, [], [], [], [])
     t = DELTA_T  # начальное время
     step: int = 0  # счетчик шагов
+    distance = D0
+    s = interceptor.velocity * DELTA_T
 
     # Цикл продолжается до тех пор, пока угол коррекции не станет равным 0
-    while correctionAngle(aim, interceptor) != 0:
-        updateInterceptorPoint(interceptor, aim)
+    while True:
         draw(aim, interceptor, step)
-        UpdatePointOnCircle(aim, t, center, start)
-        qi = findQAngle(aim, interceptor)
         distance = distanceBetween(aim.trajectory[-1], interceptor.trajectory[-1])
+        UpdatePointOnCircle(aim, t, center, start)
+        updateInterceptorPoint(interceptor, aim)
+        qi = findQAngle(aim, interceptor)
 
         flight.n.append(overloadCircleTargeting(aim, interceptor, qi))
         flight.d.append(distance)
@@ -162,13 +166,14 @@ def circleFight(aim: Role, interceptor: Role, center: Point, start: Point) -> Fl
         flight.t.append(t)
         t += DELTA_T
         step += 1
+        if correctionAngle(aim, interceptor, pres) == 0 and distance < s:
+            break
 
-    destroy(aim, interceptor)
     flight.steps = step
     return flight
 
 
-def lineFight(aim: Role, interceptor: Role) -> Flight:
+def lineFight(aim: Role, interceptor: Role, pres) -> Flight:
     """
     Моделирует процесс перехвата цели, движущейся по прямой траектории.
 
@@ -182,14 +187,16 @@ def lineFight(aim: Role, interceptor: Role) -> Flight:
     flight = Flight([], 0, [], [], [], [])
     t = DELTA_T  # начальное время
     step: int = 0  # счетчик шагов
+    distance = D0
+    s = interceptor.velocity * DELTA_T
 
     # Цикл продолжается до тех пор, пока угол коррекции не станет равным 0
-    while correctionAngle(aim, interceptor) != 0:
-        updateInterceptorPoint(interceptor, aim)
+    while True:
         draw(aim, interceptor, step)
-        UpdatePointOnLine(aim, t)
-        qi = findQAngle(aim, interceptor)
         distance = distanceBetween(aim.trajectory[-1], interceptor.trajectory[-1])
+        UpdatePointOnLine(aim, t)
+        updateInterceptorPoint(interceptor, aim)
+        qi = findQAngle(aim, interceptor)
 
         flight.n.append(overloadLineTargeting(aim, interceptor, qi))
         flight.d.append(distance)
@@ -197,7 +204,8 @@ def lineFight(aim: Role, interceptor: Role) -> Flight:
         flight.t.append(t)
         t += DELTA_T
         step += 1
+        if correctionAngle(aim, interceptor, pres) == 0 and distance < s:
+            break
 
-    destroy(aim, interceptor)
     flight.steps = step
     return flight

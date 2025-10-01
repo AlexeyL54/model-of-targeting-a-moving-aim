@@ -1,4 +1,4 @@
-from math import sin, cos, pi, sqrt, asin
+from math import sin, cos, sqrt
 
 from shared import (
     D0,
@@ -13,22 +13,6 @@ from shared import (
 from targeting import UpdatePointOnCircle
 
 
-def updateAimPoint(aim: Role, q: float):
-    """
-    Обновляет позицию цели на основе угла курса.
-
-    Args:
-        aim (Role): Объект цели, чья траектория обновляется
-        q (float): Угол курса в градусах
-    """
-    if aim.trajectory:
-        Q = q * pi / 180
-        S = aim.velocity * DELTA_T
-        x = S * cos(Q) + aim.trajectory[-1].x
-        y = S * sin(Q) + aim.trajectory[-1].y
-        aim.trajectory.append(Point(x, y))
-
-
 def updateInterceptorPoint(aim: Role, interceptor: Role):
     """
     Обновляет позицию перехватчика для движения к цели.
@@ -37,11 +21,9 @@ def updateInterceptorPoint(aim: Role, interceptor: Role):
         aim (Role): Объект цели
         interceptor (Role): Объект перехватчика, чья траектория обновляется
     """
-    q = findQAngle(aim, interceptor)
-    phi = asin((aim.velocity * sin(q)) / interceptor.velocity)
-    S = interceptor.velocity * DELTA_T
-    x = S * cos(phi) + interceptor.trajectory[-1].x
-    y = S * sin(phi) + interceptor.trajectory[-1].y
+    s = interceptor.velocity * DELTA_T
+    y = (aim.trajectory[-1].y - aim.trajectory[-2].y) + interceptor.trajectory[-1].y
+    x = sqrt(abs(s**2 - y**2)) + interceptor.trajectory[-1].x
     interceptor.trajectory.append(Point(x, y))
 
 
@@ -62,7 +44,7 @@ def overloadForParellelConvergence(aim: Role, interceptor: Role, q: float) -> fl
     return n
 
 
-def fight(aim: Role, interceptor: Role) -> Flight:
+def fight(aim: Role, interceptor: Role, center: Point, start: Point, d: int) -> Flight:
     """
     Моделирует процесс перехвата цели параллельным сближением.
 
@@ -75,17 +57,15 @@ def fight(aim: Role, interceptor: Role) -> Flight:
     """
     t = DELTA_T  # начальное время
     step: int = 0  # счетчик шагов
-    flight = Flight([], 0, [], [], [], [])
+    flight = Flight([], 0, [], [], [0], [])
     distance = D0
-    circle_center = Point(0, 0)
-    aim_start_on_circle = Point(0, 0)
 
-    # Цикл продолжается до тех пор, пока угол коррекции не станет равным 0
-    while distance > 200:
+    # Пока расстояние между целью и перехватчиком больше 200 м
+    while distance > d:
         distance = distanceBetween(aim.trajectory[-1], interceptor.trajectory[-1])
         draw(aim, interceptor, step)
+        UpdatePointOnCircle(aim, t, center, start)
         updateInterceptorPoint(aim, interceptor)
-        UpdatePointOnCircle(aim, t, circle_center, aim_start_on_circle)
         qi = findQAngle(aim, interceptor)
 
         flight.n.append(overloadForParellelConvergence(aim, interceptor, qi))

@@ -118,7 +118,7 @@ def angleBetween(vec1: Point, vec2: Point) -> float:
     return acos(cos_angle)
 
 
-def correctionAngle(aim: Role, interceptor: Role):
+def correctionAngle(aim: Role, interceptor: Role, pres: int) -> float:
     """
     Вычисляет угол коррекции между направлением на цель и направлением движения перехватчика.
 
@@ -129,6 +129,7 @@ def correctionAngle(aim: Role, interceptor: Role):
     Returns:
         float: Угол коррекции в радианах или -1 при ошибке
     """
+    angle: float = -1.0
     if len(interceptor.trajectory) > 1:
         # Вектор от предыдущей позиции перехватчика к текущей позиции цели
         d_vec_x = aim.trajectory[-1].x - interceptor.trajectory[-2].x
@@ -149,9 +150,8 @@ def correctionAngle(aim: Role, interceptor: Role):
 
         # Проверка корректности значения косинуса (должен быть в диапазоне [-1, 1])
         if cos_corr_angle >= -1 and cos_corr_angle <= 1:
-            return round(acos(cos_corr_angle), 1)  # Возвращаем угол в радианах
-        else:
-            return -1
+            angle = round(acos(cos_corr_angle), pres)  # Возвращаем угол в радианах
+    return angle
 
 
 def destroy(aim: Role, interceptor: Role):
@@ -181,7 +181,7 @@ def distanceBetween(p1: Point, p2: Point) -> float:
         float: Расстояние между точками
     """
     delta_x = p2.x - p1.x
-    delta_y = p2.y - p2.y
+    delta_y = p2.y - p1.y
     return sqrt(delta_x**2 + delta_y**2)
 
 
@@ -234,9 +234,10 @@ def findPhiAngle(aim: Role, interceptor: Role):
     """
     phi = -1
     if len(interceptor.trajectory) > 1:
-        vision_vec = makeVector(interceptor.trajectory[-1], aim.trajectory[-1])
+        # vision_vec = makeVector(interceptor.trajectory[-1], aim.trajectory[-1])
+        d0_vec = makeVector(interceptor.trajectory[0], aim.trajectory[0])
         inter_vec = makeVector(interceptor.trajectory[-2], interceptor.trajectory[-1])
-        phi = angleBetween(vision_vec, inter_vec)
+        phi = angleBetween(d0_vec, inter_vec)
     return phi
 
 
@@ -254,22 +255,3 @@ def saveFig(path: str, x_label: str, y_label: str):
     plt.ylabel(y_label)
     plt.savefig(path)
     plt.clf()
-
-
-def interpolate(x: list, y: list) -> list:
-    """
-    Экстраполирует входной массив данных.
-
-    Args:
-        x (list): входной массив данных
-    Returns:
-        list: список значений функции экстрополяции
-    """
-    func = interp1d(
-        x,
-        y,
-        axis=0,  # interpolate along columns
-        bounds_error=False,
-        kind="linear",
-    )
-    return func(x)

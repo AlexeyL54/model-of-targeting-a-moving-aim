@@ -8,7 +8,6 @@ from shared import (
     R,
     Point,
     Role,
-    interpolate,
     saveFig,
     saveFlightData,
 )
@@ -37,9 +36,13 @@ def main():
     parallel_aim = Role(AIM_VELOCITY, [Point(D0, 0)])
     parallel_interceptor = Role(INTERCEPTOR_VELOCITY, [Point(0, 0)])
 
+    away_parallel_aim = Role(-AIM_VELOCITY, [Point(D0, 0)])
+    away_parallel_interceptor = Role(INTERCEPTOR_VELOCITY, [Point(0, 0)])
+
     # Запуск моделирования погони
+    # ======================================================================================================
     circle_flight = targeting.circleFight(
-        circle_aim, circle_interceptor, circle_center, start_on_circle
+        circle_aim, circle_interceptor, circle_center, start_on_circle, 1
     )
     saveFig("img/погоня_по_окружности.pdf", "x, М", "y, М")
     t_dense = np.linspace(min(circle_flight.t), max(circle_flight.t), 300)
@@ -49,11 +52,13 @@ def main():
     print(f"Погоня по окружности завершилась через {circle_flight.steps} шагов")
     saveFlightData("img/погоня_по_окружности.txt", circle_flight)
 
+    # ======================================================================================================
     circle_flight = targeting.circleFight(
         away_circle_aim,
         away_circle_interceptor,
         away_circle_center,
         away_start_on_circle,
+        1,
     )
     saveFig("img/погоня_по_окружности_от_нас.pdf", "x, М", "y, М")
     t_dense = np.linspace(min(circle_flight.t), max(circle_flight.t), 300)
@@ -65,7 +70,8 @@ def main():
     print(f"Погоня по окружности от нас завершилась через {circle_flight.steps} шагов")
     saveFlightData("img/погоня_по_окружности_от_нас.txt", circle_flight)
 
-    line_flight = targeting.lineFight(line_aim, line_interceptor)
+    # ======================================================================================================
+    line_flight = targeting.lineFight(line_aim, line_interceptor, 1)
     saveFig("img/погоня_по_прямой.pdf", "x, М", "y, М")
     t_dense = np.linspace(min(line_flight.t), max(line_flight.t), 300)
     func = interp1d(line_flight.t, line_flight.n, kind="cubic", bounds_error=False)
@@ -74,7 +80,10 @@ def main():
     print(f"Погоня по прямой завершилась через {line_flight.steps} шагов")
     saveFlightData("img/погоня_по_прямой.txt", line_flight)
 
-    parallel_flight = parallel.fight(parallel_aim, parallel_interceptor)
+    # ======================================================================================================
+    parallel_flight = parallel.fight(
+        parallel_aim, parallel_interceptor, circle_center, start_on_circle, 200
+    )
     saveFig("img/параллельное_сближение.pdf", "x, М", "y, М")
     t_dense = np.linspace(min(parallel_flight.t), max(parallel_flight.t), 300)
     func = interp1d(
@@ -86,6 +95,33 @@ def main():
         f"Погоня методом параллельного сближения завершилась через {parallel_flight.steps} шагов"
     )
     saveFlightData("img/параллельное_сближение.txt", parallel_flight)
+
+    # ======================================================================================================
+    parallel_flight_away = parallel.fight(
+        away_parallel_aim,
+        away_parallel_interceptor,
+        away_circle_center,
+        away_start_on_circle,
+        500,
+    )
+    saveFig("img/параллельное_сближение_от_нас.pdf", "x, М", "y, М")
+    t_dense = np.linspace(min(parallel_flight_away.t), max(parallel_flight_away.t), 300)
+    func = interp1d(
+        parallel_flight_away.t,
+        parallel_flight_away.n,
+        kind="linear",
+        bounds_error=False,
+    )
+    plt.plot(t_dense, func(t_dense))
+    saveFig(
+        "img/перегрузки_при_параллельном_сближении_от_нас.pdf",
+        "время, сек",
+        "перегрузка",
+    )
+    print(
+        f"Погоня методом параллельного сближения от нас завершилась через {parallel_flight_away.steps} шагов"
+    )
+    saveFlightData("img/параллельное_сближение_от_нас.txt", parallel_flight_away)
 
 
 if __name__ == "__main__":
