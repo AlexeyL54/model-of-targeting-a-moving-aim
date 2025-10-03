@@ -8,11 +8,10 @@ from shared import (
     Role,
     draw,
     correctionAngle,
-    destroy,
     findQAngle,
     distanceBetween,
 )
-from math import sin, cos, pi, sqrt
+from math import sin, cos, pi, sqrt, isclose
 
 
 def UpdatePointOnCircle(aim: Role, t: float, center: Point, start: Point):
@@ -118,6 +117,7 @@ def overloadCircleTargeting(aim: Role, interceptor: Role, q: float) -> float:
     Returns:
         float: Значение необходимой перегрузки
     """
+    n: float = 0
     if aim.trajectory and interceptor.trajectory:
         Q = q * pi / 180
         G = 9.8
@@ -128,8 +128,6 @@ def overloadCircleTargeting(aim: Role, interceptor: Role, q: float) -> float:
             n: float = (interceptor.velocity * abs(aim.velocity) * sin(Q)) / (G * D)
         except ZeroDivisionError:
             n: float = interceptor.velocity**2 / (G * R)
-    else:
-        n: float = 0
     return n
 
 

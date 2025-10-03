@@ -1,7 +1,6 @@
 from math import sqrt, acos
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
-from scipy.interpolate import interp1d
 
 # Константы моделирования
 D0 = 2500  # начальное расстояние между целью и перехватчиком (м)
@@ -27,6 +26,8 @@ class Role:
 
     velocity: float
     trajectory: list[Point]
+    x_indent: float
+    y_indent: float
 
 
 @dataclass
@@ -68,7 +69,6 @@ def draw(aim: Role, interceptor: Role, i: int):
         interceptor (Role): Объект перехватчика
         i (int): Номер текущего шага
     """
-    indent = 50  # отступ для букв от точек
 
     if len(interceptor.trajectory) > 1:
         # Отрисовка траектории перехватчика между предыдущей и текущей точками
@@ -90,12 +90,18 @@ def draw(aim: Role, interceptor: Role, i: int):
         color="black",
     )
     plt.text(
-        interceptor.trajectory[i].x, interceptor.trajectory[i].y + indent, "П" + str(i)
+        interceptor.trajectory[i].x + interceptor.x_indent,
+        interceptor.trajectory[i].y + interceptor.y_indent,
+        "П" + str(i),
     )
 
     # Отрисовка точки цели с меткой
     plt.plot(aim.trajectory[i].x, aim.trajectory[i].y, marker="*", color="red")
-    plt.text(aim.trajectory[i].x, aim.trajectory[i].y + indent, "Ц" + str(i))
+    plt.text(
+        aim.trajectory[i].x + aim.x_indent,
+        aim.trajectory[i].y + aim.y_indent,
+        "Ц" + str(i),
+    )
 
 
 def angleBetween(vec1: Point, vec2: Point) -> float:
